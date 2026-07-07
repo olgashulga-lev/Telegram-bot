@@ -19,7 +19,7 @@ async def cmd_avatar(message: types.Message):
         exp_for_next = player.get_exp_for_next_level()
         exp_text = f"Опыт: {player.exp}/{exp_for_next}"
     else:
-        exp_text = "🏆 МАКСИМУМ!"
+        exp_text = "МАКСИМУМ!"
     
     text = f"""
 <b>{player.name}</b>
@@ -29,10 +29,9 @@ async def cmd_avatar(message: types.Message):
 
 HP: {player.hp}/100
 Урон: {player.damage}
-Удача: {int(player.luck * 100)}%
+Удача: {int(player.luck * 100)}
 Деньги: {player.money}
 """
-    
     try:
         with open(player.photo, 'rb') as photo:
             await message.answer_photo(photo, caption=text)
@@ -49,12 +48,11 @@ async def cmd_inventory(message: types.Message):
     inventory = api.get_inventory(message.chat.id, message.from_user.id)
     
     if not inventory:
-        await message.answer(f"🧳 <b>Инвентарь {player.name}:</b>\n\nПока пуст...")
+        await message.answer(f"<b>Инвентарь {player.name}:</b>\n\nПока пуст...")
         return
     
-    text = f"🧳 <b>Инвентарь {player.name}:</b>\n\n"
+    text = f"<b>Инвентарь {player.name}:</b>\n\n"
     
-    # Группируем предметы по типам
     items_by_type = {}
     for item in inventory:
         item_type = item.get('type', 'Прочее')
@@ -65,7 +63,7 @@ async def cmd_inventory(message: types.Message):
     for item_type, items in items_by_type.items():
         text += f"<b>{item_type}:</b>\n"
         for item in items:
-            text += f"  • {item['name']} x{item['quantity']}\n"
+            text += f"{item['name']} x{item['quantity']}\n"
         text += "\n"
     
     await message.answer(text)
@@ -80,13 +78,13 @@ async def cmd_achievement(message: types.Message):
     achievements = api.get_user_achievements(message.chat.id, message.from_user.id)
     
     if not achievements:
-        await message.answer(f"🏆 <b>Достижения {player.name}:</b>\n\nПока нет достижений...")
+        await message.answer(f"<b>Достижения {player.name}:</b>\n\nПока нет достижений...")
         return
     
-    text = f"🏆 <b>Достижения {player.name}:</b>\n\n"
+    text = f"<b>Достижения {player.name}:</b>\n\n"
     
     for ach in achievements[:10]:
-        text += f"✨ <b>{ach.name}</b>\n"
+        text += f"<b>{ach.name}</b>\n"
         text += f"   {ach.description}\n\n"
     
     if len(achievements) > 10:

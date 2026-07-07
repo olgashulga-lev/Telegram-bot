@@ -30,7 +30,6 @@ async def set_commands():
         BotCommand(command="inventory", description="Инвентарь"),
         BotCommand(command="achievement", description="Достижения"),
         BotCommand(command="fight", description="Вызвать на дуэль"),
-        BotCommand(command="task", description="Список заданий"),
         BotCommand(command="event", description="Мероприятия"),
         BotCommand(command="raid", description="Рейды на боссов"),
         BotCommand(command="shop", description="Магазин"),

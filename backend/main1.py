@@ -38,18 +38,6 @@ class Person(Base):
     luck = Column(Integer, default=20)
     level = Column(Integer, default=1)
 
-class Task(Base):
-    __tablename__ = "task"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(200), nullable=False)
-    money = Column(Integer, nullable=False)
-    duration = Column(Integer, nullable=False)
-    chat_id = Column(Integer, nullable=False)
-    owner_user_id = Column(Integer, nullable=False)
-    worker_user_id = Column(Integer, nullable=True)
-    deadline = Column(DateTime, nullable=True)
-
 class Achievement(Base):
     __tablename__ = "achievement"
     
@@ -94,7 +82,7 @@ class ActiveEffectDB(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, nullable=False)
     chat_id = Column(Integer, nullable=False)
-    effect_type = Column(String(50), nullable=False)  # 'hp_bonus', 'damage_bonus', 'luck_bonus'
+    effect_type = Column(String(50), nullable=False)
     value = Column(Integer, nullable=False)
     started_at = Column(DateTime, default=datetime.utcnow)
     duration_seconds = Column(Integer, nullable=False)
@@ -131,31 +119,6 @@ class PersonResponse(BaseModel):
     damage: int
     luck: int
     level: int = 1
-    
-    class Config:
-        from_attributes = True
-
-class TaskCreate(BaseModel):
-    name: str
-    money: int
-    duration: int
-    chat_id: int
-    owner_user_id: int
-
-class TaskUpdate(BaseModel):
-    id: int
-    worker_user_id: Optional[int] = None
-    deadline: Optional[datetime] = None
-
-class TaskResponse(BaseModel):
-    id: int
-    name: str
-    money: int
-    duration: int
-    chatId: int
-    ownerUserId: int
-    workerUserId: Optional[int] = None
-    deadline: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -274,7 +237,6 @@ def get_players_by_chat(chat_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/person/create_alt", status_code=201)
 def create_player_alt(data: dict, db: Session = Depends(get_db)):
-    """Альтернативный эндпоинт для создания игрока"""
     try:
         user_id = data.get('user_id')
         chat_id = data.get('chat_id')
@@ -310,7 +272,6 @@ def create_player_alt(data: dict, db: Session = Depends(get_db)):
 
 @app.post("/api/person/create", status_code=201)
 def create_player(person: PersonCreate, db: Session = Depends(get_db)):
-    """Создание нового игрока"""
     existing = get_person(db, person.chat_id, person.user_id)
     if existing:
         raise HTTPException(status_code=400, detail="Игрок уже существует")
@@ -351,7 +312,6 @@ def update_player(
 
 @app.get("/api/person/all", response_model=List[PersonResponse])
 def get_all_players(db: Session = Depends(get_db)):
-    """Получить всех игроков из всех чатов"""
     players = db.query(Person).all()
     return [
         PersonResponse(
@@ -376,7 +336,6 @@ def update_player_level(
     level: int,
     db: Session = Depends(get_db)
 ):
-    """Обновить уровень игрока"""
     player = get_person(db, chat_id, user_id)
     if not player:
         raise HTTPException(status_code=404, detail="Игрок не найден")
@@ -391,116 +350,11 @@ def get_player_level(
     user_id: int,
     db: Session = Depends(get_db)
 ):
-    """Получить уровень игрока"""
     player = get_person(db, chat_id, user_id)
     if not player:
         raise HTTPException(status_code=404, detail="Игрок не найден")
     
     return {"level": player.level, "experience": player.experience}
-
-# Task
-@app.get("/api/task/free", response_model=List[TaskResponse])
-def get_free_tasks(db: Session = Depends(get_db)):
-    tasks = db.query(Task).filter(Task.worker_user_id.is_(None)).all()
-    return [
-        TaskResponse(
-            id=t.id,
-            name=t.name,
-            money=t.money,
-            duration=t.duration,
-            chatId=t.chat_id,
-            ownerUserId=t.owner_user_id,
-            workerUserId=t.worker_user_id,
-            deadline=t.deadline
-        )
-        for t in tasks
-    ]
-
-@app.get("/api/task/all", response_model=List[TaskResponse])
-def get_all_tasks(db: Session = Depends(get_db)):
-    tasks = db.query(Task).all()
-    return [
-        TaskResponse(
-            id=t.id,
-            name=t.name,
-            money=t.money,
-            duration=t.duration,
-            chatId=t.chat_id,
-            ownerUserId=t.owner_user_id,
-            workerUserId=t.worker_user_id,
-            deadline=t.deadline
-        )
-        for t in tasks
-    ]
-
-@app.get("/api/task/taken/{worker_user_id}/{chat_id}", response_model=List[TaskResponse])
-def get_taken_tasks(worker_user_id: int, chat_id: int, db: Session = Depends(get_db)):
-    tasks = db.query(Task).filter(
-        Task.chat_id == chat_id,
-        Task.worker_user_id == worker_user_id
-    ).all()
-    return [
-        TaskResponse(
-            id=t.id,
-            name=t.name,
-            money=t.money,
-            duration=t.duration,
-            chatId=t.chat_id,
-            ownerUserId=t.owner_user_id,
-            workerUserId=t.worker_user_id,
-            deadline=t.deadline
-        )
-        for t in tasks
-    ]
-
-@app.get("/api/task/person/{owner_user_id}/{chat_id}", response_model=List[TaskResponse])
-def get_person_tasks(owner_user_id: int, chat_id: int, db: Session = Depends(get_db)):
-    tasks = db.query(Task).filter(
-        Task.chat_id == chat_id,
-        Task.owner_user_id == owner_user_id
-    ).all()
-    return [
-        TaskResponse(
-            id=t.id,
-            name=t.name,
-            money=t.money,
-            duration=t.duration,
-            chatId=t.chat_id,
-            ownerUserId=t.owner_user_id,
-            workerUserId=t.worker_user_id,
-            deadline=t.deadline
-        )
-        for t in tasks
-    ]
-
-@app.post("/api/task/create", status_code=201)
-def create_task(task: TaskCreate, db: Session = Depends(get_db)):
-    db_task = Task(**task.dict())
-    db.add(db_task)
-    db.commit()
-    return {"message": "Задание создано"}
-
-@app.put("/api/task/update")
-def update_task(data: TaskUpdate, db: Session = Depends(get_db)):
-    task = db.query(Task).filter(Task.id == data.id).first()
-    if not task:
-        raise HTTPException(status_code=404, detail="Задание не найдено")
-    
-    if data.worker_user_id is not None:
-        task.worker_user_id = data.worker_user_id
-    if data.deadline is not None:
-        task.deadline = data.deadline
-    
-    db.commit()
-    return {"message": "Задание обновлено"}
-
-@app.delete("/api/task/delete/{task_id}", status_code=204)
-def delete_task(task_id: int, db: Session = Depends(get_db)):
-    task = db.query(Task).filter(Task.id == task_id).first()
-    if task:
-        db.delete(task)
-        db.commit()
-    return None
 
 # Achievement
 @app.get("/api/achievement/person/{chat_id}/{user_id}", response_model=List[AchievementResponse])
@@ -560,7 +414,6 @@ def get_events(chat_id: int, db: Session = Depends(get_db)):
 @app.post("/api/event/create", status_code=201)
 def create_event(event: EventCreate, db: Session = Depends(get_db)):
     try:
-        # Поддержка разных форматов даты
         try:
             event_datetime = datetime.strptime(event.datetime, "%d.%m.%Y %H:%M")
         except ValueError:
@@ -590,7 +443,6 @@ def delete_event(event_id: int, db: Session = Depends(get_db)):
 # Items (для магазина)
 @app.get("/api/item/all", response_model=List[ItemResponse])
 def get_items(db: Session = Depends(get_db)):
-    # Возвращаем захардкоженные предметы, так как в БД их нет
     return [
         ItemResponse(id=1, name="Зелье здоровья", price=50, description="Восстанавливает 20 HP", type="shop"),
         ItemResponse(id=2, name="Зелье силы", price=80, description="Увеличивает урон на 5", type="shop"),
@@ -618,7 +470,6 @@ def get_inventory(chat_id: int, user_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/inventory/add")
 def add_to_inventory(request: InventoryAddRequest, db: Session = Depends(get_db)):
-    # Проверяем, есть ли уже такой предмет у игрока
     existing = db.query(Inventory).filter(
         Inventory.user_id == request.user_id,
         Inventory.chat_id == request.chat_id,
@@ -695,7 +546,6 @@ def apply_effect(
     duration_seconds: int,
     db: Session = Depends(get_db)
 ):
-    """Применить эффект к игроку"""
     effect = ActiveEffectDB(
         user_id=user_id,
         chat_id=chat_id,
@@ -709,7 +559,6 @@ def apply_effect(
 
 @app.delete("/api/effects/clear/{chat_id}/{user_id}")
 def clear_expired_effects(chat_id: int, user_id: int, db: Session = Depends(get_db)):
-    """Очистить истекшие эффекты"""
     now = datetime.utcnow()
     effects = db.query(ActiveEffectDB).filter(
         ActiveEffectDB.chat_id == chat_id,

@@ -21,14 +21,12 @@ class Player:
         return f"{self.name} (Ур. {self.level})"
     
     def get_exp_for_next_level(self):
-        """Расчет опыта для перехода на следующий уровень"""
         return int(50 * self.level + 50 * (self.level ** 2) / 2)
     
     def get_max_level(self):
         return 30
     
     def add_exp(self, amount):
-        """Добавить опыт и повысить уровень при необходимости"""
         self.exp += amount
         
         leveled_up = False
@@ -48,7 +46,6 @@ class Player:
         return leveled_up
     
     def apply_level_bonus(self):
-        """Применить бонусы за новый уровень"""
         self.damage += 2
         self.luck = min(0.8, self.luck + 0.05)
 
@@ -59,16 +56,6 @@ class Achievement:
         self.image = photo
         self.condition = condition
         self.description = description
-
-class Task:
-    def __init__(self, id, name, chat_id, owner_id, money, duration, worker_id=None):
-        self.id = id
-        self.name = name
-        self.chat_id = chat_id
-        self.owner_id = owner_id
-        self.money = money
-        self.duration = duration
-        self.worker_id = worker_id
 
 class Event:
     def __init__(self, id, name, datetime, chat_id, user_id):

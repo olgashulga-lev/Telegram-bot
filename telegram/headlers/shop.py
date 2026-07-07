@@ -69,11 +69,9 @@ async def cmd_shop_buy(callback: types.CallbackQuery):
         await callback.answer(f"Не хватает денег! Нужно: {item.price}, есть: {player.money}")
         return
     
-    # Списываем деньги
     player.money -= item.price
     api.update_player(player)
     
-    # ДОБАВЛЯЕМ ПРЕДМЕТ В ИНВЕНТАРЬ
     api.add_item_to_inventory(
         chat_id=callback.message.chat.id,
         user_id=callback.from_user.id,
@@ -82,7 +80,7 @@ async def cmd_shop_buy(callback: types.CallbackQuery):
         item_type=item.type
     )
     
-    await callback.answer(f"✅ Вы купили {item.name}!")
+    await callback.answer(f"Вы купили {item.name}!")
     
-    text = f"<b>Магазин</b>\nВаш баланс: {player.money}\n\n✅ Куплено: {item.name}"
+    text = f"<b>Магазин</b>\nВаш баланс: {player.money}\n\n Куплено: {item.name}"
     await callback.message.edit_text(text)

@@ -3,7 +3,6 @@ from aiogram import Dispatcher
 from . import common
 from . import registration
 from . import player
-from . import tasks
 from . import fight
 from . import event
 from . import raid
@@ -17,7 +16,6 @@ def register_handlers(dp: Dispatcher):
         common.router,
         registration.router,
         player.router,
-        tasks.router,
         fight.router,
         event.router,
         raid.router,

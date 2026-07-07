@@ -1,5 +1,5 @@
 import requests
-from models import Player, Achievement, Task, Event, Boss, Item
+from models import Player, Achievement, Event, Boss, Item
 
 BACKEND_URL = "http://localhost:8000/api"
 
@@ -112,35 +112,6 @@ def get_user_achievements(chat_id, user_id):
             description=a['description']
         ))
     return achievements
-
-# Задания
-def get_free_tasks(chat_id):
-    data = _make_request("GET", "task/free")
-    if not data:
-        return []
-    
-    tasks = []
-    for t in data:
-        if t['chatId'] == chat_id and t['workerUserId'] is None:
-            tasks.append(Task(
-                id=t['id'],
-                name=t['name'],
-                chat_id=t['chatId'],
-                owner_id=t['ownerUserId'],
-                money=t['money'],
-                duration=t['duration']
-            ))
-    return tasks
-
-def take_task(task, worker_id):
-    data = {
-        'id': task.id,
-        'worker_user_id': worker_id
-    }
-    return _make_request("PUT", "task/update", data)
-
-def complete_task(task):
-    return _make_request("DELETE", f"task/delete/{task.id}")
 
 # Мероприятия
 def get_events(chat_id):

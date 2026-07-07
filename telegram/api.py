@@ -1,7 +1,7 @@
 import requests
 import configparser
 from pathlib import Path
-from models import Player, Achievement, Task, Event, Boss, Item
+from models import Player, Achievement, Event, Boss, Item
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -82,30 +82,7 @@ def update_player(player):
     params = {'chat_id': player.chat_id, 'user_id': player.user_id}
     return _make_request("PUT", "person/update", data, params)
 
-def get_all_players(chat_id):
-    # Вместо фильтрации по чату - получаем ВСЕХ игроков
-    data = _make_request("GET", "person/all")  # Новый эндпоинт
-    if not data:
-        return []
-    
-    players = []
-    for p in data:
-        players.append(Player(
-            chat_id=p.get('chatId', chat_id),
-            user_id=p['userId'],
-            name=p['name'],
-            photo=p['photo'],
-            exp=p.get('experience', 0),
-            money=p.get('money', 100),
-            hp=p.get('hp', 100),
-            damage=p.get('damage', 20),
-            luck=p.get('luck', 20) / 100,
-            level=p.get('level', 1)
-        ))
-    return players
-
-def get_all_players_global():
-    """Получить всех игроков из всех чатов"""
+def get_all_players():
     data = _make_request("GET", "person/all")
     if not data:
         return []
@@ -127,22 +104,15 @@ def get_all_players_global():
     return players
 
 def get_and_update_player_with_exp(chat_id, user_id, exp_gain):
-    """Получить игрока, добавить опыт и вернуть обновленного"""
     player = get_player(chat_id, user_id)
     if not player:
         return None, False
     
-    # Добавляем опыт
     leveled_up = player.add_exp(exp_gain)
-    
-    # Обновляем в БД
     update_player(player)
-    
     return player, leveled_up
 
 def get_player_exp_for_level(level):
-    """Получить опыт для указанного уровня"""
-    # Используем ту же формулу что и в Player
     return int(50 * level + 50 * (level ** 2) / 2)
 
 def get_max_level():
@@ -167,7 +137,6 @@ def get_user_achievements(chat_id, user_id):
     return achievements
 
 def give_achievement(chat_id, user_id, name, description, condition=None):
-    """Выдать достижение игроку"""
     data = {
         'user_id': user_id,
         'chat_id': chat_id,
@@ -178,64 +147,18 @@ def give_achievement(chat_id, user_id, name, description, condition=None):
     }
     return _make_request("POST", "achievement/create", data)
 
-#Задания
-
-def get_free_tasks(chat_id):
-    data = _make_request("GET", "task/free")
-    if not data:
-        return []
-    
-    tasks = []
-    for t in data:
-        # Исправление: проверяем, что задание принадлежит этому чату и не имеет исполнителя
-        if t.get('chatId') == chat_id and t.get('workerUserId') is None:
-            tasks.append(Task(
-                id=t['id'],
-                name=t['name'],
-                chat_id=t['chatId'],
-                owner_id=t['ownerUserId'],
-                money=t['money'],
-                duration=t['duration']
-            ))
-    return tasks
-
-def create_task(chat_id, owner_id, name, money, duration):
-    """Создать задание"""
-    data = {
-        'name': name,
-        'money': money,
-        'duration': duration,
-        'chat_id': chat_id,  # меняем на chat_id
-        'owner_user_id': owner_id  # меняем на owner_user_id
-    }
-    print(f"📤 Создание задания: {data}")
-    result = _make_request("POST", "task/create", data)
-    print(f"📥 Результат: {result}")
-    return result is not None
-
-def take_task(task, worker_id):
-    data = {
-        'id': task.id,
-        'workerUserId': worker_id
-    }
-    return _make_request("PUT", "task/update", data)
-
-def complete_task(task):
-    return _make_request("DELETE", f"task/delete/{task.id}")
-
 #Мероприятия
 
 def create_event(chat_id, user_id, name, datetime):
-    """Создать мероприятие"""
     data = {
         'name': name,
         'datetime': datetime,
         'chat_id': chat_id,
         'user_id': user_id
     }
-    print(f"📤 Создание мероприятия: {data}")
+    print(f"Создание мероприятия: {data}")
     result = _make_request("POST", "event/create", data)
-    print(f"📥 Результат: {result}")
+    print(f"Результат: {result}")
     return result is not None
 
 def get_events(chat_id):
@@ -248,7 +171,7 @@ def get_events(chat_id):
         events.append(Event(
             id=e['id'],
             name=e['name'],
-            datetime=e.get('startedAt', 'Неизвестно'),  # Исправлено: startedAt вместо datetime
+            datetime=e.get('startedAt', 'Неизвестно'),
             chat_id=e.get('chatId', chat_id),
             user_id=e.get('userId', 0)
         ))
@@ -310,14 +233,12 @@ def get_inventory(chat_id, user_id):
 
 #Зелья
 def get_active_effects(chat_id, user_id):
-    """Получить активные эффекты игрока"""
     data = _make_request("GET", f"effects/{chat_id}/{user_id}")
     if not data:
         return []
     return data
 
 def apply_effect(chat_id, user_id, effect_type, value, duration_seconds):
-    """Применить эффект к игроку"""
     params = {
         'chat_id': chat_id,
         'user_id': user_id,
@@ -328,32 +249,25 @@ def apply_effect(chat_id, user_id, effect_type, value, duration_seconds):
     return _make_request("POST", "effects/apply", data=None, params=params)
 
 def clear_expired_effects(chat_id, user_id):
-    """Очистить истекшие эффекты"""
     return _make_request("DELETE", f"effects/clear/{chat_id}/{user_id}")
 
 def use_item_in_battle(chat_id, user_id, item_id):
-    """Использовать предмет в бою (для зелий здоровья)"""
-    # Проверяем инвентарь
     inventory = get_inventory(chat_id, user_id)
     item = next((i for i in inventory if i.get('item_id') == item_id), None)
     
     if not item or item.get('quantity', 0) <= 0:
         return None
     
-    # Для зелья здоровья - восстанавливаем HP
-    if item_id == 1:  # Зелье здоровья
+    if item_id == 1:
         player = get_player(chat_id, user_id)
         if player:
             heal_amount = 20
             player.hp = min(100, player.hp + heal_amount)
             update_player(player)
-            # Удаляем одно зелье из инвентаря
             item['quantity'] -= 1
             if item['quantity'] <= 0:
-                # Удаляем из инвентаря
                 _make_request("DELETE", f"inventory/remove/{item['id']}")
             else:
-                # Обновляем количество
                 _make_request("PUT", "inventory/update", data={
                     'inventory_id': item['id'],
                     'quantity': item['quantity']
