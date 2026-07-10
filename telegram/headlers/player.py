@@ -2,6 +2,7 @@ from aiogram import Router, types
 from aiogram.filters import Command
 import api
 from .common_utils import get_player_or_none
+from aiogram.types import FSInputFile
 
 router = Router()
 
@@ -33,8 +34,7 @@ HP: {player.hp}/100
 Деньги: {player.money}
 """
     try:
-        with open(player.photo, 'rb') as photo:
-            await message.answer_photo(photo, caption=text)
+        await message.answer_photo(FSInputFile(player.photo), caption=text)
     except:
         await message.answer(text)
 
