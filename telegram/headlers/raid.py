@@ -1,14 +1,20 @@
 from aiogram import Router, types, F
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 import api
 from .common_utils import get_player_or_none
 import random
-import asyncio
 import uuid
+import os
 
 router = Router()
 active_raids = {}
+
+BOSS_IMAGES = {
+    1: "static/bosses/big_frog.jpg",
+    2: "static/bosses/orc.jpg",
+    3: "static/bosses/dragon.jpg"
+}
 
 def generate_raid_id():
     return str(uuid.uuid4())[:8]
@@ -203,18 +209,30 @@ async def start_raid(message: types.Message, boss_id: int):
     if not player:
         await message.answer("Сначала зарегистрируйтесь: /registration")
         return
-    
+
     bosses = api.get_bosses()
     boss = next((b for b in bosses if b.id == boss_id), None)
     if not boss:
         await message.answer("Такого босса нет!")
         return
-    
+
+    # Отправляем изображение босса
+    boss_image = BOSS_IMAGES.get(boss_id)
+    if boss_image and os.path.exists(boss_image):
+        try:
+            photo = FSInputFile(boss_image)
+            await message.answer_photo(
+                photo=photo,
+                caption=f"<b>{boss.name}</b>\nHP: {boss.hp}\nУрон: {boss.damage}"
+            )
+        except Exception as e:
+            print(f"Ошибка при отправке фото босса: {e}")
+
     for raid in active_raids.values():
         if message.from_user.id in raid['players']:
             await message.answer("Вы уже участвуете в другом рейде!")
             return
-    
+
     raid_id = generate_raid_id()
     
     active_raids[raid_id] = {
@@ -227,7 +245,7 @@ async def start_raid(message: types.Message, boss_id: int):
         'created_at': message.date,
         'creator_name': player.name
     }
-    
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -244,7 +262,7 @@ async def start_raid(message: types.Message, boss_id: int):
             ]
         ]
     )
-    
+
     await message.answer(
         f"<b>Рейд создан!</b>\n\n"
         f"Босс: {boss.name}\n"
@@ -421,6 +439,15 @@ async def cmd_raid_battle(callback: types.CallbackQuery):
         text += f"Каждый игрок получает:\n"
         text += f"{reward_per_player} монет\n"
         text += f"{exp_per_player} опыта"
+
+        for user_id in raid['players']:
+            for p in all_players:
+                if p.user_id == user_id:
+                    player = api.get_player(p.chat_id, user_id)
+                    if player:
+                        player.wins += 1
+                        api.update_player(player)
+                    break
 
         achievement_messages = []
         achievement_config = {
